@@ -1,0 +1,16 @@
+- [ ] Terrain generation
+	- Fractal Perlin noise
+	- [This video](https://www.youtube.com/watch?v=gsJHzBTPG0Y)
+	- Water bodies
+- [ ] Camera controlling
+	- Relearn geometric algebra
+- [ ] District mapping
+	- Drawing out residential, commercial, industrial
+	- Mapping cursor to 3d scene
+- [ ] Road generation
+	- Avoid sharp elevation changes
+	- Avoid lakes/water
+	- Should be grid-like, but still natural
+	- Wave function collapse?
+- [ ] Building generation
+	- Stick to districts
