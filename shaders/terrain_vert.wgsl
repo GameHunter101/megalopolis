@@ -38,7 +38,7 @@ fn main(model: VertexInput, model_data: ModelData) -> VertexOutput {
 
     var out:VertexOutput;
 
-    let height_map_offset = textureLoad(height_map, vec2i(model.tex_coords), 0);
+    let height_map_offset = 5.0 * textureLoad(height_map, vec2i(model.tex_coords), 0);
 
     let world_position = model_matrix * (vec4<f32>(model.position,1.0) + height_map_offset);
     out.clip_position = camera.view_proj * world_position;

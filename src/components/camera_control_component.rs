@@ -1,6 +1,6 @@
 use algoe::{bivector::Bivector, rotor::Rotor3};
 use gamezap::{ecs::components::transform_component::TransformComponent, new_component};
-use nalgebra::{Vector3, Matrix4, Vector4};
+use nalgebra::{Matrix4, Vector3, Vector4};
 
 new_component!(CameraControlComponent { camera_speed: f32 });
 
@@ -39,15 +39,6 @@ impl ComponentSystem for CameraControlComponent {
                 "position".to_string(),
             )
             .unwrap();
-
-        let matrix = *this_concept_manager
-            .get_concept::<Matrix4<f32>>(
-                (self.id.0, TypeId::of::<TransformComponent>(), self.id.2),
-                "matrix".to_string(),
-            )
-            .unwrap();
-        println!("{matrix}");
-
         drop(this_concept_manager);
 
         if scancodes.contains(&sdl2::keyboard::Scancode::Q) {
@@ -57,41 +48,23 @@ impl ComponentSystem for CameraControlComponent {
                         concept_manager.clone(),
                         (algoe::bivector::Bivector::new(0.0, 1.0, 0.0)
                             * std::f32::consts::FRAC_PI_4
-                            / 2.0)
+                            / 3.0)
                             .exponentiate(),
                     );
 
-                    // transform
-                    //     .apply_translation(concept_manager.clone(), -1.0 * position);
-
-                    /* transform.apply_rotation(
-                        concept_manager.clone(),
-                        (Bivector::new(0.0, 0.0, -1.0) * self.camera_speed).exponentiate(),
-                    ); */
                     let rotor = (Bivector::new(0.0, 0.0, 1.0) * self.camera_speed).exponentiate();
-                    let mat = Matrix4::from_columns(&[
-                        (rotor * Vector3::x_axis().xyz()).to_homogeneous(),
-                        (rotor * Vector3::y_axis().xyz()).to_homogeneous(),
-                        (rotor * Vector3::z_axis().xyz()).to_homogeneous(),
-                        Vector4::new(0.0, 0.0, 0.0, 1.0),
-                    ]);
 
+                    let new_position = rotor * position;
 
-                    // println!("{mat}");
+                    transform.apply_rotation(concept_manager.clone(), rotor);
 
-                    transform.apply_rotation(
-                        concept_manager.clone(),
-                        (Bivector::new(0.0, 0.0, 1.0) * self.camera_speed).exponentiate(),
-                    );
-
-                    // transform
-                    //     .apply_translation(concept_manager.clone(), position);
+                    transform.apply_translation(concept_manager.clone(), new_position - position);
 
                     transform.apply_rotation(
                         concept_manager.clone(),
                         (algoe::bivector::Bivector::new(0.0, 1.0, 0.0)
                             * -std::f32::consts::FRAC_PI_4
-                            / 2.0)
+                            / 3.0)
                             .exponentiate(),
                     );
                 }
@@ -105,31 +78,23 @@ impl ComponentSystem for CameraControlComponent {
                         concept_manager.clone(),
                         (algoe::bivector::Bivector::new(0.0, 1.0, 0.0)
                             * std::f32::consts::FRAC_PI_4
-                            / 2.0)
+                            / 3.0)
                             .exponentiate(),
                     );
 
-                    transform
-                        .apply_translation(concept_manager.clone(), -1.0 * position);
+                    let rotor = (Bivector::new(0.0, 0.0, -1.0) * self.camera_speed).exponentiate();
 
-                    transform.apply_rotation(
-                        concept_manager.clone(),
-                        (Bivector::new(0.0, 0.0, 1.0) * self.camera_speed).exponentiate(),
-                    );
+                    let new_position = rotor * position;
 
-                    transform
-                        .apply_translation(concept_manager.clone(), position);
+                    transform.apply_rotation(concept_manager.clone(), rotor);
 
+                    transform.apply_translation(concept_manager.clone(), new_position - position);
 
-                    transform.apply_rotation(
-                        concept_manager.clone(),
-                        (Bivector::new(0.0, 0.0, -1.0) * self.camera_speed).exponentiate(),
-                    );
                     transform.apply_rotation(
                         concept_manager.clone(),
                         (algoe::bivector::Bivector::new(0.0, 1.0, 0.0)
                             * -std::f32::consts::FRAC_PI_4
-                            / 2.0)
+                            / 3.0)
                             .exponentiate(),
                     );
                 }

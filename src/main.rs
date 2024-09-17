@@ -55,12 +55,9 @@ async fn main() {
 
     let camera_transform_component = core_components::transform_component::TransformComponent::new(
         concept_manager.clone(),
-        // Vector3::new(-20.0, -20.0, 100.0),
-        // Vector3::new(0.0, 5.0, 0.0),
-        Vector3::new(0.0, 5.0, -25.0),
-        (algoe::bivector::Bivector::new(0.0, 1.0, 0.0) * -std::f32::consts::FRAC_PI_4 / 2.0)
+        Vector3::new(0.0, 10.0, -15.0),
+        (algoe::bivector::Bivector::new(0.0, 1.0, 0.0) * -std::f32::consts::FRAC_PI_4 / 3.0)
             .exponentiate(),
-        // algoe::rotor::Rotor3::default(),
         Vector3::new(1.0, 1.0, 1.0),
     );
 
@@ -141,67 +138,6 @@ async fn main() {
         ],
         Some((vec![terrain_material], 0)),
     );
-
-    // Terrain 2
-
-    let (terrain_2_vertices, terrain_2_indices) =
-        terrain_mesh_creation(1, 3.0);
-
-    let terrain_2_mesh_component = core_components::mesh_component::MeshComponent::new(
-        concept_manager.clone(),
-        terrain_2_vertices,
-        terrain_2_indices,
-    );
-
-    let terrain_2_transform_component = core_components::transform_component::TransformComponent::new(
-        concept_manager.clone(),
-        Vector3::new(0.0, 0.0, -15.0),
-        algoe::rotor::Rotor3::default(),
-        Vector3::new(1.0, 1.0, 1.0),
-    );
-
-    let terrain_2_height_map = image::RgbaImage::from_fn(
-        terrain_resolution as u32 + 1,
-        terrain_resolution as u32 + 1,
-        |x, y| {
-            let height = ((x * x + y * y) as f32).sqrt()
-                / (terrain_resolution as f32 * std::f32::consts::SQRT_2);
-            let height = (height * 255.0) as u8;
-            image::Rgba([0, height, 0, 0])
-        },
-    );
-
-    let terrain_2_height_texture = Rc::new(
-        gamezap::texture::Texture::from_rgba(
-            &device,
-            &queue,
-            &terrain_2_height_map,
-            Some("Terrain height map"),
-            true,
-            true,
-        )
-        .unwrap(),
-    );
-
-    let terrain_2_material = Material::new(
-        "shaders/terrain_vert.wgsl",
-        "shaders/terrain_frag.wgsl",
-        vec![terrain_2_height_texture],
-        None,
-        true,
-        device.clone(),
-    );
-
-    let _terrain_2_entity = scene.create_entity(
-        0,
-        true,
-        vec![
-            Box::new(terrain_2_mesh_component),
-            Box::new(terrain_2_transform_component),
-        ],
-        Some((vec![terrain_2_material], 0)),
-    );
-
 
     engine.create_scene(scene);
     engine.main_loop();
