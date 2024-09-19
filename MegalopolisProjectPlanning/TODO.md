@@ -2,7 +2,8 @@
 	- Fractal Perlin noise
 	- [This video](https://www.youtube.com/watch?v=gsJHzBTPG0Y)
 	- Water bodies
-- [ ] Camera controlling
+	- [This paper](https://www.cs.umd.edu/class/spring2018/cmsc425/Lects/lect13-2d-perlin.pdf)
+- [x] Camera controlling
 	- Relearn geometric algebra
 - [ ] District mapping
 	- Drawing out residential, commercial, industrial

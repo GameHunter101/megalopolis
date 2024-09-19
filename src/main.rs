@@ -5,10 +5,13 @@ use gamezap::{
     model::Vertex,
 };
 use nalgebra::Vector3;
+use perlin_noise::PerlinNoise;
 
 pub mod components {
     pub mod camera_control_component;
 }
+
+pub mod perlin_noise;
 
 #[tokio::main]
 async fn main() {
@@ -97,13 +100,19 @@ async fn main() {
         Vector3::new(1.0, 1.0, 1.0),
     );
 
+    let perlin_size = 5;
+
+    let perlin = PerlinNoise::new(perlin_size, 1, 1.0, 0);
+
     let terrain_height_map = image::RgbaImage::from_fn(
         terrain_resolution as u32 + 1,
         terrain_resolution as u32 + 1,
         |x, y| {
-            let height = ((x * x + y * y) as f32).sqrt()
-                / (terrain_resolution as f32 * std::f32::consts::SQRT_2);
-            let height = (height * 255.0) as u8;
+            let perlin_val = perlin.evaluate(
+                x as f32 / (terrain_resolution / perlin_size + 1) as f32,
+                y as f32 / (terrain_resolution / perlin_size + 1) as f32,
+            );
+            let height = ((perlin_val + 1.0) / 2.0 * 255.0) as u8;
             image::Rgba([0, height, 0, 0])
         },
     );
