@@ -1,4 +1,4 @@
-use nalgebra::Vector2;
+use nalgebra::{ComplexField, Vector2};
 use rand::{Rng, SeedableRng};
 use rand_chacha::ChaCha8Rng;
 
@@ -8,6 +8,7 @@ pub struct PerlinNoise {
     octaves: usize,
     persistence: f32,
     seed: u64,
+    size: usize,
 }
 
 impl PerlinNoise {
@@ -18,13 +19,10 @@ impl PerlinNoise {
 
         for row in &mut grid {
             for vec in row {
-                // let comp_x = rng.gen_range::<i32, _>(-1..=1) as f32;
-                // let comp_y = rng.gen_range::<i32, _>(-1..=1) as f32;
                 let comp_x = rng.gen_range::<f32, _>(-5.0..=5.0);
                 let comp_y = rng.gen_range::<f32, _>(-5.0..=5.0);
                 *vec = Vector2::new(comp_x, comp_y).normalize();
             }
-            println!();
         }
 
         Self {
@@ -32,6 +30,7 @@ impl PerlinNoise {
             octaves,
             persistence,
             seed,
+            size,
         }
     }
 
@@ -73,9 +72,39 @@ impl PerlinNoise {
         let bottom_left_displacement = bottom_left_perlin.dot(&bottom_left_distance);
         let bottom_right_displacement = bottom_right_perlin.dot(&bottom_right_distance);
 
-        let top_lerp = Self::lerp(top_left_displacement, top_right_displacement, Self::fade(x % 1.0));
-        let bottom_lerp = Self::lerp(bottom_left_displacement, bottom_right_displacement, Self::fade(x % 1.0));
+        let top_lerp = Self::lerp(
+            top_left_displacement,
+            top_right_displacement,
+            Self::fade(x % 1.0),
+        );
+        let bottom_lerp = Self::lerp(
+            bottom_left_displacement,
+            bottom_right_displacement,
+            Self::fade(x % 1.0),
+        );
 
         Self::lerp(top_lerp, bottom_lerp, Self::fade(y % 1.0))
+    }
+
+    pub fn octave_evaluate(&self, x: f32, y: f32) -> f32 {
+        (0..self.octaves)
+            .map(|i| {
+                self.persistence.powi(i as i32)
+                    * self.evaluate(2.0.powi(i as i32) * x, 2.0.powi(i as i32) * y)
+            })
+            .sum()
+    }
+
+    /// Calculates the Perlin noise map in reverse order. This is done so that there will be no
+    /// tiling or seams in the final texture
+    pub fn reverse_octave_evaluate(&self, x: f32, y: f32) -> f32 {
+        (0..self.octaves)
+            .map(|old_i| {
+                let i = (self.octaves - 1 - old_i) as i32;
+
+                self.evaluate(x / (2.0.powi(i)), 0.5.powi(i) * y)
+                    * self.persistence.powi(old_i as i32)
+            })
+            .sum()
     }
 }
