@@ -59,7 +59,7 @@ impl ComponentSystem for CameraControlComponent {
                         ),
                     );
 
-                    let rotor = (Bivector::new(0.0, 0.0, 1.0) * self.camera_speed).exponentiate();
+                    let rotor = (Bivector::new(0.0, 0.0, -1.0) * self.camera_speed).exponentiate();
 
                     let new_position = rotor * position;
 
@@ -85,7 +85,7 @@ impl ComponentSystem for CameraControlComponent {
                         ),
                     );
 
-                    let rotor = (Bivector::new(0.0, 0.0, -1.0) * self.camera_speed).exponentiate();
+                    let rotor = (Bivector::new(0.0, 0.0, 1.0) * self.camera_speed).exponentiate();
 
                     let new_position = rotor * position;
 
@@ -126,7 +126,7 @@ impl ComponentSystem for CameraControlComponent {
             }
         }
 
-        if scancodes.contains(&sdl2::keyboard::Scancode::A) {
+        if scancodes.contains(&sdl2::keyboard::Scancode::D) {
             for comp in component_map.get_mut(&self.parent).unwrap() {
                 if let Some(transform) = comp.as_any_mut().downcast_mut::<TransformComponent>() {
                     let new_position = position * (1.0 - self.camera_speed);
@@ -137,7 +137,7 @@ impl ComponentSystem for CameraControlComponent {
             }
         }
 
-        if scancodes.contains(&sdl2::keyboard::Scancode::D) {
+        if scancodes.contains(&sdl2::keyboard::Scancode::A) {
             for comp in component_map.get_mut(&self.parent).unwrap() {
                 if let Some(transform) = comp.as_any_mut().downcast_mut::<TransformComponent>() {
                     let new_position = position * (1.0 + self.camera_speed);

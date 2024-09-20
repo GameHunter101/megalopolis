@@ -81,7 +81,7 @@ async fn main() {
     scene.set_active_camera(camera_entity);
 
     // Terrain
-    let terrain_resolution = 100;
+    let terrain_resolution = 300;
     let terrain_size = 20.0;
 
     let (terrain_vertices, terrain_indices) =
@@ -100,7 +100,7 @@ async fn main() {
         Vector3::new(1.0, 1.0, 1.0),
     );
 
-    let perlin_size = 5;
+    let perlin_size = 10;
 
     let perlin = PerlinNoise::new(perlin_size, 1, 1.0, 0);
 
@@ -109,8 +109,8 @@ async fn main() {
         terrain_resolution as u32 + 1,
         |x, y| {
             let perlin_val = perlin.evaluate(
-                x as f32 / (terrain_resolution / perlin_size + 1) as f32,
-                y as f32 / (terrain_resolution / perlin_size + 1) as f32,
+                x as f32 / ((terrain_resolution+1) / perlin_size) as f32,
+                y as f32 / ((terrain_resolution+1) / perlin_size) as f32,
             );
             let height = ((perlin_val + 1.0) / 2.0 * 255.0) as u8;
             image::Rgba([0, height, 0, 0])
