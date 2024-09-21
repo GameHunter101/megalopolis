@@ -1,19 +1,43 @@
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     @location(0) tex_coords: vec2<f32>,
+    @location(1) normal: vec3<f32>,
+    @location(2) vert_pos: vec3<f32>,
 }
+
+@group(0) @binding(0)
+var height_map: texture_2d<f32>;
+
+@group(0) @binding(1)
+var height_sampler: sampler;
+
+struct Camera {
+    view_pos: vec4<f32>,
+    view_proj: mat4x4<f32>,
+};
+@group(1) @binding(0)
+var<uniform> camera: Camera;
 
 @fragment
 fn main(in: VertexOutput) -> @location(0) vec4<f32> {
-    return vec4f(in.tex_coords/ 30.0, 0.0, 1.0);
+    // return vec4f(in.clip_position.xyz / 800.0, 1.0);
+    // let val = textureSample(height_map, height_sampler, in.tex_coords / 300.0).y;
 
-    /* let x_coord = u32(floor(in.tex_coords.x * 128.0));
-    let y_coord = u32(floor(in.tex_coords.y * 128.0));
-    let vec_index = y_coord / 4u;
-    let rem = y_coord % 4u;
+    // return vec4f(val, val, val, 1.0);
+    // return vec4f(in.normal, 1.0);
+    let light_position = vec3f(-5.0, -5.0, 7.0);
 
-    let value = grid[x_coord][vec_index][rem] / 10.0;
+    let highlight_color = vec3f(1.0);
+    let surface_color = vec3f(0.0, 1.0, 0.0);
+    let cool_color = vec3f(0.0, 0.0, 0.55) + 0.25 * surface_color;
+    let warm_color = vec3f(0.3, 0.3, 0.0) + 0.25 * surface_color;
 
-    return vec4f(value, value, value, 1.0); */
+    let vector_to_light = normalize(light_position - in.vert_pos);
+    let vector_to_camera = normalize(camera.view_pos.xyz - in.vert_pos);
+    let light_contribution = dot(in.normal, vector_to_light);
+    let t = (light_contribution + 1.0) / 2.0;
+    let r = 2.0 * light_contribution * in.normal - vector_to_light;
+    let s = clamp(100.0 * dot(r,vector_to_camera) - 97.0, 0.0, 1.0);
 
+    return vec4f(mix(highlight_color, mix(warm_color, cool_color, 1.0 - t), 1.0 - s), 1.0);
 }
