@@ -1,6 +1,6 @@
 [package]
 name = "megalopolis"
-version = "0.1.7"
+version = "0.1.8"
 edition = "2021"
 
 [dependencies]
@@ -15,6 +15,7 @@ pollster = "0.3.0"
 algoe = {git = "https://github.com/GameHunter101/Algoe" }
 rand = "0.8.5"
 rand_chacha = "0.3.1"
+rayon = "1.10.0"
 
 [dependencies.sdl2]
 version = "0.36"

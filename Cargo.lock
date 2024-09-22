@@ -917,7 +917,7 @@ dependencies = [
 
 [[package]]
 name = "megalopolis"
-version = "0.1.7"
+version = "0.1.8"
 dependencies = [
  "algoe",
  "bytemuck",
@@ -928,6 +928,7 @@ dependencies = [
  "pollster",
  "rand",
  "rand_chacha",
+ "rayon",
  "sdl2",
  "tokio",
  "wgpu",

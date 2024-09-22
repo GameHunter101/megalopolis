@@ -28,6 +28,9 @@ var<uniform> camera: Camera;
 @group(0) @binding(0)
 var height_map: texture_2d<f32>;
 
+@group(0) @binding(2)
+var river_map: texture_2d<f32>;
+
 
 fn convolve(coords: vec2i) -> vec2f {
     var sobel_y = mat3x3(1.0,2.0,1.0, 0.0,0.0,0.0, -1.0, -2.0, -1.0);
@@ -45,8 +48,10 @@ fn convolve(coords: vec2i) -> vec2f {
     return grad;
 }
 
+const TERRAIN_AMPLITUDE: f32 = 2.0;
+
 fn sample(coords: vec2f) -> f32 {
-    return 5.0 * textureLoad(height_map, vec2i(coords), 0).y;
+    return TERRAIN_AMPLITUDE * textureLoad(height_map, vec2i(coords), 0).y;
 }
 
 @vertex

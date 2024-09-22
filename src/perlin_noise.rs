@@ -12,7 +12,9 @@ pub struct PerlinNoise {
 impl PerlinNoise {
     pub fn new(size: usize, octaves: usize, persistence: f32, seed: u64) -> Self {
         Self {
-            grids: (0..octaves).map(|i| Self::generate_grid(size, seed + i as u64)).collect(),
+            grids: (0..octaves)
+                .map(|i| Self::generate_grid(size, seed + i as u64))
+                .collect(),
             octaves,
             persistence,
         }
@@ -44,8 +46,14 @@ impl PerlinNoise {
         t * t * t * (t * (t * 6.0 - 15.0) + 10.0)
     }
 
-    fn lerp(a: f32, b: f32, t: f32) -> f32 {
-        a + t * (b - a)
+    pub fn lerp<T>(a: T, b: T, t: f32) -> T
+    where
+        T: std::ops::Add<T, Output = T>
+            + std::ops::Sub<T, Output = T>
+            + std::ops::Mul<f32, Output = T>
+            + Copy,
+    {
+        a + (b - a) * t
     }
 
     /// Calculate the perlin noise value at a given `(x, y)` coordinate. The greatest `x` or `y`

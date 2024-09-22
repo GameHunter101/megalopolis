@@ -6,12 +6,14 @@ use gamezap::{
 };
 use nalgebra::Vector3;
 use perlin_noise::PerlinNoise;
+use river_generator::River;
 
 pub mod components {
     pub mod camera_control_component;
 }
 
 pub mod perlin_noise;
+pub mod river_generator;
 
 #[tokio::main]
 async fn main() {
@@ -100,22 +102,83 @@ async fn main() {
         Vector3::new(1.0, 1.0, 1.0),
     );
 
-    let perlin_size = 50;
+    let terrain_seed = 0;
 
-    let perlin = PerlinNoise::new(perlin_size, 5, 0.5, 0);
+    let perlin_size = 30;
+
+    let perlin = PerlinNoise::new(perlin_size, 5, 0.5, terrain_seed);
 
     let terrain_height_map = image::RgbaImage::from_fn(
         terrain_resolution as u32 + 2,
         terrain_resolution as u32 + 2,
         |x, y| {
             let perlin_val = perlin.reverse_octave_evaluate(
-                x as f32 / ((terrain_resolution+1) / perlin_size) as f32,
-                y as f32 / ((terrain_resolution+1) / perlin_size) as f32,
+                x as f32 / ((terrain_resolution + 1) / perlin_size) as f32,
+                y as f32 / ((terrain_resolution + 1) / perlin_size) as f32,
             );
             let height = ((perlin_val + 1.0) / 2.0 * 255.0) as u8;
             image::Rgba([0, height, 0, 0])
         },
     );
+
+    let mut river = River::new(terrain_size, 1.0, terrain_seed);
+
+    river.random_shift(20);
+
+    /* let rough_river_sample = (0..=20)
+    .map(|i| {
+        let t = i as f32 / 20.0;
+
+        (1.0 - t).powi(3)
+            * (river.starting_point
+                + nalgebra::Vector2::new(terrain_size / 2.0, terrain_size / 2.0))
+            + 3.0
+                * t
+                * (1.0 - t).powi(2)
+                * (river.control_points[0]
+                    + nalgebra::Vector2::new(terrain_size / 2.0, terrain_size / 2.0))
+            + 3.0
+                * t
+                * t
+                * (1.0 - t)
+                * (river.control_points[1]
+                    + nalgebra::Vector2::new(terrain_size / 2.0, terrain_size / 2.0))
+            + t * t
+                * t
+                * (river.ending_point
+                    + nalgebra::Vector2::new(terrain_size / 2.0, terrain_size / 2.0))
+    })
+    .collect::<Vec<_>>(); */
+
+    dbg!(&river.control_points);
+
+    /* let river_height_map = image::RgbaImage::from_fn(
+        terrain_resolution as u32 + 2,
+        terrain_resolution as u32 + 2,
+        |x, y| {
+            let vector = nalgebra::Vector2::new(
+                x as f32 / ((terrain_resolution + 1) / perlin_size) as f32,
+                y as f32 / ((terrain_resolution + 1) / perlin_size) as f32,
+            );
+
+            image::Rgba([
+                PerlinNoise::lerp(
+                    0.0,
+                    255.0,
+                    rough_river_sample
+                        .iter()
+                        .map(|p| ((p - vector).magnitude() * 100.0) as i32)
+                        .min()
+                        .unwrap() as f32
+                        / 100.0
+                        / (terrain_size * std::f32::consts::SQRT_2),
+                ) as u8,
+                0,
+                0,
+                255,
+            ])
+        },
+    ); */
 
     let terrain_height_texture = Rc::new(
         gamezap::texture::Texture::from_rgba(
@@ -129,10 +192,13 @@ async fn main() {
         .unwrap(),
     );
 
+    let river_height_texture =
+        Rc::new(river.create_texture(&device, &queue, terrain_size, terrain_resolution as u32 + 2));
+
     let terrain_material = Material::new(
         "shaders/terrain_vert.wgsl",
         "shaders/terrain_frag.wgsl",
-        vec![terrain_height_texture],
+        vec![terrain_height_texture, river_height_texture],
         None,
         true,
         device.clone(),
