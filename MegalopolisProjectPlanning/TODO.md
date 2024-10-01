@@ -1,4 +1,4 @@
-- [ ] Terrain generation
+- [x] Terrain generation
 	- Fractal Perlin noise
 	- [This video](https://www.youtube.com/watch?v=gsJHzBTPG0Y)
 	- Water bodies
@@ -9,8 +9,17 @@
 		2) Linearly interpolate to get the other control points
 		3) Randomly shift the control points
 		4) Maybe add falloff?
+	- Lake generation
+		- Maybe do some gradient descent trickery?
+		- Maybe just mark points beneath a certain threshold?
+		- Maybe just use another perlin noise map?
 - [x] Camera controlling
 	- Relearn geometric algebra
+- [ ] Resource generation
+	1) Generate a handful of random points
+		- Should be fairly close together
+	2) Compute minimum of their SDF's
+	3) Bound the result
 - [ ] District mapping
 	- Drawing out residential, commercial, industrial
 	- Mapping cursor to 3d scene

@@ -917,10 +917,11 @@ dependencies = [
 
 [[package]]
 name = "megalopolis"
-version = "0.1.8"
+version = "0.1.9"
 dependencies = [
  "algoe",
  "bytemuck",
+ "futures",
  "gamezap",
  "image",
  "imgui",

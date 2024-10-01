@@ -54,8 +54,6 @@ impl River {
                 + Vector2::new(rng.gen_range(-0.1..=0.1), rng.gen_range(-0.1..=0.1)),
         ];
 
-        dbg!(&starting_point, &ending_point);
-
         Self {
             starting_point,
             ending_point,
@@ -95,8 +93,8 @@ impl River {
         }
     }
 
-    const NEWTON_METHOD_ITERATIONS: usize = 10;
-    const EVALUATION_POINT_COUNT: usize = 10;
+    const NEWTON_METHOD_ITERATIONS: usize = 5;
+    const EVALUATION_POINT_COUNT: usize = 5;
     pub fn create_texture(
         &self,
         device: &wgpu::Device,
@@ -110,73 +108,79 @@ impl River {
             self.control_points[1],
             self.ending_point,
         ];
+        let bezier_coefficients = [
+            bezier_points[0],
+            -3.0 * bezier_points[0] + 3.0 * bezier_points[1],
+            3.0 * bezier_points[0] - 6.0 * bezier_points[1] + 3.0 * bezier_points[2],
+            -1.0 * bezier_points[0] + 3.0 * bezier_points[1] - 3.0 * bezier_points[2]
+                + bezier_points[3],
+        ];
+        let bezier_samples: [Vector2<f32>; 20] = (0..=19).map(|t| {
+            Self::bezier_evaluate(&bezier_coefficients, t as f32 / 19.0)
+        }).collect::<Vec<_>>().try_into().unwrap();
+
         let river_size = self.size;
-        let pixels = (0..resolution + 2)
+        let pixels = (0..resolution * resolution)
             .into_par_iter()
-            .flat_map(|y| {
-                (0..resolution + 2).into_par_iter().flat_map(move |x| {
-                    let position = Vector2::new(
-                        x as f32 * terrain_size / resolution as f32,
-                        y as f32 * terrain_size / resolution as f32,
+            .flat_map(|i| {
+                let y = i / resolution;
+                let x = i % resolution;
+                let position = Vector2::new(
+                    x as f32 * terrain_size / resolution as f32,
+                    y as f32 * terrain_size / resolution as f32,
+                );
+
+                let mut min_sample_distance_squared = 100000.0_f32;
+                for sample in &bezier_samples {
+                    let distance_vector = sample - position;
+                    min_sample_distance_squared = min_sample_distance_squared.min(distance_vector.dot(&distance_vector));
+                }
+
+                if min_sample_distance_squared > river_size * river_size * 1.5 {
+                    return [0, 0, 0, 255];
+                }
+
+                let mut t_values = Vec::with_capacity(Self::EVALUATION_POINT_COUNT + 3);
+                t_values.push(0.0);
+
+                for i in 0..=Self::EVALUATION_POINT_COUNT {
+                    t_values.push(
+                        Self::newton_method_evaluate(
+                            &bezier_coefficients,
+                            position,
+                            i as f32 / Self::EVALUATION_POINT_COUNT as f32,
+                            Self::NEWTON_METHOD_ITERATIONS,
+                        )
+                        .clamp(0.0, 1.0),
                     );
+                }
 
-                    let mut t_values = Vec::with_capacity(Self::EVALUATION_POINT_COUNT + 3);
-                    t_values.push(0.0);
+                t_values.push(1.0);
 
-                    for i in 0..=Self::EVALUATION_POINT_COUNT {
-                        t_values.push(
-                            Self::newton_method_evaluate(
-                                &bezier_points,
-                                position,
-                                i as f32 / Self::EVALUATION_POINT_COUNT as f32,
-                                Self::NEWTON_METHOD_ITERATIONS,
-                            )
-                            .clamp(0.0, 1.0),
-                        );
-                    }
+                let mut min_val = 10000000.0_f32;
 
-                    t_values.push(1.0);
-
-                    let mut min_val = 10000000.0_f32;
-                    for t in &t_values {
-                        let dist =
-                            Self::bezier_evaluate(&bezier_points, *t).metric_distance(&position);
-                        if !dist.is_nan() && dist.is_finite() {
-                            min_val = min_val.min(dist);
-                        }
-                    }
-
-                    /* for t in &t_values {
-                        let current_distance =
-                            Self::bezier_evaluate(&bezier_points, *t).metric_distance(&position);
-                        if current_distance < river_size {
-                            return [255_u8, 0, 0, 255];
-                        }
-                    }
-                    [0, 0, 0, 255] */
-                    let faded_val = Self::fade(min_val / (resolution as f32));
-
-                    let final_val = if faded_val > river_size {
-                        0.0
-                    } else {
-                        faded_val / river_size
-                    };
-
-                    [
-                        PerlinNoise::lerp(0.0, 255.0, final_val)
-                            as u8,
+                for t in &t_values {
+                    let current_distance =
+                        Self::bezier_evaluate(&bezier_coefficients, *t).metric_distance(&position);
+                    min_val = min_val.min(current_distance);
+                }
+                if min_val < river_size {
+                    return [
+                        PerlinNoise::lerp(
+                            255.0,
+                            10.0,
+                            (min_val* min_val) / (river_size * river_size),
+                        ) as u8,
                         0,
                         0,
                         255,
-                    ]
-                })
+                    ];
+                }
+                [0, 0, 0, 255]
             })
             .collect::<Vec<_>>();
 
-        let height_map =
-            image::RgbaImage::from_vec(resolution + 2, resolution + 2, pixels).unwrap();
-        /* let height_map = image::RgbaImage::from_fn(resolution + 2, resolution + 2, |x, y| {
-        }); */
+        let height_map = image::RgbaImage::from_vec(resolution, resolution, pixels).unwrap();
 
         gamezap::texture::Texture::from_rgba(
             device,
@@ -189,51 +193,28 @@ impl River {
         .unwrap()
     }
 
-    fn fade(t: f32) -> f32 {
-        t * (1.5 + t * (1.0 - 1.65 * t))
+    fn bezier_evaluate(bezier_coefficients: &[Vector2<f32>], t: f32) -> Vector2<f32> {
+        bezier_coefficients[0]
+            + t * bezier_coefficients[1]
+            + t * t * bezier_coefficients[2]
+            + t * t * t * bezier_coefficients[3]
     }
 
-    fn bezier_evaluate(bezier_points: &[Vector2<f32>], t: f32) -> Vector2<f32> {
-        // Bezier polynomial coefficients
-        let t_0_coefficient = bezier_points[0];
-        let t_1_coefficient = -3.0 * bezier_points[0] + 3.0 * bezier_points[1];
-        let t_2_coefficient =
-            3.0 * bezier_points[0] - 6.0 * bezier_points[1] + 3.0 * bezier_points[2];
-        let t_3_coefficient = -1.0 * bezier_points[0] + 3.0 * bezier_points[1]
-            - 3.0 * bezier_points[2]
-            + bezier_points[3];
-
-        t_0_coefficient
-            + t * t_1_coefficient
-            + t * t * t_2_coefficient
-            + t * t * t * t_3_coefficient
+    fn bezier_derivative_evaluate(bezier_coefficients: &[Vector2<f32>], t: f32) -> Vector2<f32> {
+        bezier_coefficients[1]
+            + 2.0 * t * bezier_coefficients[2]
+            + 3.0 * t * t * bezier_coefficients[3]
     }
 
-    fn bezier_derivative_evaluate(bezier_points: &[Vector2<f32>], t: f32) -> Vector2<f32> {
-        // Bezier polynomial derivative coefficients
-        let t_0_coefficient = -3.0 * bezier_points[0] + 3.0 * bezier_points[1];
-        let t_1_coefficient =
-            2.0 * (3.0 * bezier_points[0] - 6.0 * bezier_points[1] + 3.0 * bezier_points[2]);
-        let t_2_coefficient = 3.0
-            * (-1.0 * bezier_points[0] + 3.0 * bezier_points[1] - 3.0 * bezier_points[2]
-                + bezier_points[3]);
-
-        t_0_coefficient + t * t_1_coefficient + t * t * t_2_coefficient
-    }
-
-    fn bezier_second_derivative_evaluate(bezier_points: &[Vector2<f32>], t: f32) -> Vector2<f32> {
-        // Bezier polynomial second derivative coefficients
-        let t_0_coefficient =
-            2.0 * (3.0 * bezier_points[0] - 6.0 * bezier_points[1] + 3.0 * bezier_points[2]);
-        let t_1_coefficient = 6.0
-            * (-1.0 * bezier_points[0] + 3.0 * bezier_points[1] - 3.0 * bezier_points[2]
-                + bezier_points[3]);
-
-        t_0_coefficient + t * t_1_coefficient
+    fn bezier_second_derivative_evaluate(
+        bezier_coefficients: &[Vector2<f32>],
+        t: f32,
+    ) -> Vector2<f32> {
+        2.0 * bezier_coefficients[2] + 6.0 * t * bezier_coefficients[3]
     }
 
     fn newton_method_evaluate(
-        bezier_points: &[Vector2<f32>],
+        bezier_coefficients: &[Vector2<f32>],
         position: Vector2<f32>,
         initial_t: f32,
         remaining_iterations: usize,
@@ -241,10 +222,10 @@ impl River {
         if remaining_iterations == 0 {
             return initial_t;
         }
-        let bezier_point = Self::bezier_evaluate(bezier_points, initial_t);
-        let bezier_derivative = Self::bezier_derivative_evaluate(bezier_points, initial_t);
+        let bezier_point = Self::bezier_evaluate(bezier_coefficients, initial_t);
+        let bezier_derivative = Self::bezier_derivative_evaluate(bezier_coefficients, initial_t);
         let bezier_second_derivative =
-            Self::bezier_second_derivative_evaluate(bezier_points, initial_t);
+            Self::bezier_second_derivative_evaluate(bezier_coefficients, initial_t);
 
         let pointing_vector = bezier_point - position;
         let angle_between_tangent_and_pointing_vectors = pointing_vector.dot(&bezier_derivative);
@@ -254,7 +235,7 @@ impl River {
             + pointing_vector.dot(&bezier_second_derivative);
 
         Self::newton_method_evaluate(
-            bezier_points,
+            bezier_coefficients,
             position,
             initial_t
                 - angle_between_tangent_and_pointing_vectors
