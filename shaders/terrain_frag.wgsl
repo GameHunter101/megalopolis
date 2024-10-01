@@ -17,6 +17,12 @@ var river_map: texture_2d<f32>;
 @group(0) @binding(3)
 var river_sampler: sampler;
 
+@group(0) @binding(4)
+var resource_map: texture_2d<f32>;
+
+@group(0) @binding(5)
+var resource_sampler: sampler;
+
 struct Camera {
     view_pos: vec4<f32>,
     view_proj: mat4x4<f32>,
@@ -27,7 +33,8 @@ var<uniform> camera: Camera;
 
 @fragment
 fn main(in: VertexOutput) -> @location(0) vec4<f32> {
-    let river_val = textureSample(river_map, river_sampler, in.tex_coords / (f32(textureDimensions(height_map).x) - 2.0)).x;
+    return textureSample(resource_map, resource_sampler, in.tex_coords / (f32(textureDimensions(height_map).x) - 2.0));
+    /* let river_val = textureSample(river_map, river_sampler, in.tex_coords / (f32(textureDimensions(height_map).x) - 2.0)).x;
     let light_position = vec3f(-5.0, 5.0, 7.0);
 
     let highlight_color = vec3f(1.0);
@@ -42,5 +49,5 @@ fn main(in: VertexOutput) -> @location(0) vec4<f32> {
     let r = 2.0 * light_contribution * in.normal - vector_to_light;
     let s = clamp(100.0 * dot(r,vector_to_camera) - 97.0, 0.0, 1.0);
 
-    return vec4f(mix(highlight_color, mix(warm_color, cool_color, 1.0 - t), 1.0 - s), 1.0);
+    return vec4f(mix(highlight_color, mix(warm_color, cool_color, 1.0 - t), 1.0 - s), 1.0); */
 }

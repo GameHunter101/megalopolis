@@ -7,6 +7,7 @@ use gamezap::{
 use nalgebra::Vector3;
 use perlin_noise::PerlinNoise;
 use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use resource_generator::ResourceMap;
 use river_generator::River;
 
 pub mod components {
@@ -14,8 +15,8 @@ pub mod components {
 }
 
 pub mod perlin_noise;
-pub mod river_generator;
 pub mod resource_generator;
+pub mod river_generator;
 
 #[tokio::main]
 async fn main() {
@@ -112,22 +113,23 @@ async fn main() {
 
     let perlin = PerlinNoise::new(perlin_size, 5, 0.5, terrain_seed);
 
-    let terrain_height_pixels = (0..texture_res * texture_res).into_par_iter().flat_map(|i| {
-        let x = i % texture_res;
-        let y = i / texture_res;
+    let terrain_height_pixels = (0..texture_res * texture_res)
+        .into_par_iter()
+        .flat_map(|i| {
+            let x = i % texture_res;
+            let y = i / texture_res;
 
-        let perlin_val = perlin.reverse_octave_evaluate(
-            x as f32 / ((terrain_resolution + 1) / perlin_size) as f32,
-            y as f32 / ((terrain_resolution + 1) / perlin_size) as f32,
-        );
-        let height = ((perlin_val + 1.0) / 2.0 * 255.0) as u8;
-        [0, height, 0, 0]
+            let perlin_val = perlin.reverse_octave_evaluate(
+                x as f32 / ((terrain_resolution + 1) / perlin_size) as f32,
+                y as f32 / ((terrain_resolution + 1) / perlin_size) as f32,
+            );
+            let height = ((perlin_val + 1.0) / 2.0 * 255.0) as u8;
+            [0, height, 0, 0]
+        })
+        .collect::<Vec<_>>();
 
-    }).collect::<Vec<_>>();
-
-    let terrain_height_map = image::RgbaImage::from_vec(texture_res, texture_res, terrain_height_pixels).unwrap();
-
-    let lake_perlin = PerlinNoise::new(4, 1, 1.0, terrain_seed + 1);
+    let terrain_height_map =
+        image::RgbaImage::from_vec(texture_res, texture_res, terrain_height_pixels).unwrap();
 
     let mut river = River::new(terrain_size, 1.0, terrain_seed);
 
@@ -145,16 +147,21 @@ async fn main() {
         .unwrap(),
     );
 
-
-    let t = std::time::Instant::now();
     let river_height_texture =
         Rc::new(river.create_texture(&device, &queue, terrain_size, texture_res));
-    println!("{}", (std::time::Instant::now() - t).as_micros());
+
+    let resource = ResourceMap::new(5, 30.0, 100.0, 3, 30.0, 15.0, texture_res, 0);
+
+    let resource_map_texture = Rc::new(resource.create_resource_map(&device, &queue, texture_res));
 
     let terrain_material = Material::new(
         "shaders/terrain_vert.wgsl",
         "shaders/terrain_frag.wgsl",
-        vec![terrain_height_texture, river_height_texture],
+        vec![
+            terrain_height_texture,
+            river_height_texture,
+            resource_map_texture,
+        ],
         None,
         true,
         device.clone(),
